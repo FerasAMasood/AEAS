@@ -188,7 +188,7 @@ public function generatePdf($report_id)
             'model' => 'o1-mini',
             "messages" => [
                 [
-            'content' => "based on this data: json_encode($groupedDevices), can you give specific recommendations for the electrical devices units that need improvement, plz make the recommendations as straight forward, economical and easy as possible and avoid genralatizations  kindly respoend with json use description as the main key and put the recomendations as text in the value, give me a pragraph about each recomendation with energy saving calculations detailed and the total this has to be string every time, please dont use any special charachters or try to create tables just description", 
+            'content' => "based on this data: ".json_encode($groupedDevices).", can you give specific recommendations for the electrical devices units that need improvement, plz make the recommendations as straight forward, economical and easy as possible and avoid genralatizations. Please consider any notes provided for each device when making recommendations. kindly respoend with json use description as the main key and put the recomendations as text in the value, give me a pragraph about each recomendation with energy saving calculations detailed and the total this has to be string every time, please dont use any special charachters or try to create tables just description", 
             //"Analyze the following grouped devices and recommend ways to enhance power consumption efficiency. Also, calculate the expected savings:\n" . json_encode($groupedDevices),
             'role'=>'user'
                 ],
@@ -223,7 +223,7 @@ the lighting consumption.",
     $message = "based on this data: ".json_encode($groupedDevices).", and this aggrigation of the same data (".json_encode($categoryConsumption)."), return a json object, the keys are the category id, and the values and a detailed description and disccussion of energy analysis for that category, without taking about saving options the value has to be a string paragraph, don't mention category id in the text. use the follwing as expamles. Example:";
     $message = "Based on this data: ".json_encode($groupedDevices)." and this aggregation of the same data (".json_encode($categoryConsumption)."), return a JSON object where the keys are the category IDs, and the values are detailed descriptions and discussions of energy analysis for each category. The description should:
 
-Include paragraphs above the table that describe each device and its power consumption, along with the number of hours used.
+Include paragraphs above the table that describe each device and its power consumption, along with the number of hours used. If notes are provided for any device, incorporate them into the description where relevant.
 Mention only the highest-consuming device in cases where listing all devices would be unnecessary, especially if there are many devices in a category, to keep the table concise and focused on the most important information.
 Highlight how much each system contributes as a percentage of the total power consumption, which should be part of the Electricity Balance. The value for each key must be a string paragraph. Do not mention the category ID in the text. Use the following as examples. please dont use any special charachters or try to create tables just description. Exmaple:";
     $message .= implode(". Example: ", $examples). ".";
@@ -277,7 +277,7 @@ Highlight how much each system contributes as a percentage of the total power co
 
    $message = "based on this data: ".json_encode($groupedDevices).", and this aggrigation of the same data (".json_encode($categoryConsumption)."), return a json object, the keys are the category id, and the values and a detailed description and disccussion of energy analysis for that category, without taking about saving options the value has to be a string paragraph, don't mention category id in the text. use the follwing as expamles. Example:";
    $message = "Based on this data: ".json_encode($groupedDevices)." and this aggregation of the same data (".json_encode($categoryConsumption)."), return a JSON object where the keys are the category names, 
-   and the value is a json object that has the current energy use and the enery use after the recommendations and the saving, kindly use the keys: current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh";
+   and the value is a json object that has the current energy use and the enery use after the recommendations and the saving, kindly use the keys: current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh. Please consider any notes provided for devices when calculating recommendations.";
    $message .= "and based on this recomendations: ".json_encode($recommendationData["recommendations"]);
 
    $response3 = $client3->post('https://api.openai.com/v1/chat/completions', [
@@ -311,7 +311,7 @@ Highlight how much each system contributes as a percentage of the total power co
 
    $message = "based on this data: ".json_encode($groupedDevices).", and this aggrigation of the same data (".json_encode($categoryConsumption)."), return a json object, the keys are the category id, and the values and a detailed description and disccussion of energy analysis for that category, without taking about saving options the value has to be a string paragraph, don't mention category id in the text. use the follwing as expamles. Example:";
    $message = "Based on this data: ".json_encode($groupedDevices)." and this aggregation of the same data (".json_encode($categoryConsumption)."), return a JSON object where the keys are the category names, 
-   and the value is a json object that has the current energy use and the energy use after the recommendations per device grouped by category, use device name as key in the sub object, and the saving, dont give recommendations for all devices just the high consumption or high saving, kindly use the keys: current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh";
+   and the value is a json object that has the current energy use and the energy use after the recommendations per device grouped by category, use device name as key in the sub object, and the saving, dont give recommendations for all devices just the high consumption or high saving, kindly use the keys: current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh. Please consider any notes provided for devices when making recommendations.";
    $message .= "and based on this recomendations: ".json_encode($recommendationData["recommendations"]);
 
    $response4 = $client4->post('https://api.openai.com/v1/chat/completions', [

@@ -14,6 +14,7 @@ class PropertyDevice extends Model
         'category_id',
         'device_key',
         'description',
+        'notes',
         'factor',
         'power',
         'quantity',

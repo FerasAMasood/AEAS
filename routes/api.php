@@ -43,6 +43,7 @@ Route::get('/report-introductions/{report_id}', [IntroductionController::class, 
 use App\Http\Controllers\PropertyDeviceController;
 
 Route::post('/property-devices/bulk', [PropertyDeviceController::class, 'storeBulk']);
+Route::apiResource('property-devices', PropertyDeviceController::class);
 
 use App\Http\Controllers\EnergySourceController;
 

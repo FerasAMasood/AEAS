@@ -31,6 +31,7 @@ class PropertyDeviceController extends Controller
                     'category_id' => $categoryId,
                     'device_key' => $device['device_key'], // Make sure device_key is provided in each device
                     'description' => $device['description'] ?? null,
+                    'notes' => $device['notes'] ?? null,
                     'factor' => $device['factor'],
                     'power' => $device['wattage'],
                     'quantity' => $device['quantity'],
@@ -45,5 +46,83 @@ class PropertyDeviceController extends Controller
         PropertyDevice::insert($propertyDevices);
 
         return response()->json(['message' => 'Property devices added successfully.']);
+    }
+
+    public function index(Request $request)
+    {
+        $query = PropertyDevice::with(['property', 'category', 'device']);
+
+        // Filter by property_id if provided
+        if ($request->has('property_id')) {
+            $query->where('property_id', $request->property_id);
+        }
+
+        $propertyDevices = $query->get();
+
+        return response()->json($propertyDevices);
+    }
+
+    public function show($id)
+    {
+        $propertyDevice = PropertyDevice::with(['property', 'category', 'device'])->findOrFail($id);
+        return response()->json($propertyDevice);
+    }
+
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'property_id' => 'required|exists:properties,id',
+            'category_id' => 'required|exists:lookups,id',
+            'device_key' => 'required|string',
+            'description' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'factor' => 'required|numeric',
+            'power' => 'required|numeric',
+            'quantity' => 'required|integer',
+            'operation_hours' => 'required|numeric',
+            'total_consumption' => 'required|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $propertyDevice = PropertyDevice::create($request->all());
+
+        return response()->json(['message' => 'Property device created successfully.', 'data' => $propertyDevice], 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $propertyDevice = PropertyDevice::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'property_id' => 'sometimes|exists:properties,id',
+            'category_id' => 'sometimes|exists:lookups,id',
+            'device_key' => 'sometimes|string',
+            'description' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'factor' => 'sometimes|numeric',
+            'power' => 'sometimes|numeric',
+            'quantity' => 'sometimes|integer',
+            'operation_hours' => 'sometimes|numeric',
+            'total_consumption' => 'sometimes|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $propertyDevice->update($request->all());
+
+        return response()->json(['message' => 'Property device updated successfully.', 'data' => $propertyDevice]);
+    }
+
+    public function destroy($id)
+    {
+        $propertyDevice = PropertyDevice::findOrFail($id);
+        $propertyDevice->delete();
+
+        return response()->json(['message' => 'Property device deleted successfully.']);
     }
 }
