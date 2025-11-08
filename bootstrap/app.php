@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Auth\AuthenticationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,8 +13,21 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Enable CORS for API routes
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+        
+        // Don't redirect API requests - they will be handled by exception handler
+        // For web routes, we'll define a login route in web.php
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Handle unauthenticated requests for API routes
+        $exceptions->render(function (AuthenticationException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                ], 401);
+            }
+        });
     })->create();

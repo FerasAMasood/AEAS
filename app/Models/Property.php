@@ -29,5 +29,10 @@ class Property extends Model
     {
         return $this->hasMany(Report::class, 'property_id');
     }
+
+    public function ebills()
+    {
+        return $this->hasMany(Ebill::class);
+    }
 }
 

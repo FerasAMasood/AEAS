@@ -14,7 +14,7 @@ class ReportController extends Controller
 {
     public function index()
     {
-        $reports =  Report::with('property')->get(); 
+        $reports =  Report::with(['property', 'creator', 'updater'])->get(); 
         return response()->json($reports);
     }
 
@@ -33,14 +33,16 @@ class ReportController extends Controller
             $validated['cover_image'] = $request->file('cover_image')->store('reports', 'public');
         }
     
+        $validated['created_by'] = $request->user()->id;
+        $validated['updated_by'] = $request->user()->id;
         $report = Report::create($validated);
     
-        return response()->json(['message' => 'Report created successfully', 'report' => $report], 201);
+        return response()->json(['message' => 'Report created successfully', 'report' => $report->load(['creator', 'updater'])], 201);
     }
     
     public function show($id)
     {
-        $report = Report::with('property')->findOrFail($id);
+        $report = Report::with(['property', 'creator', 'updater'])->findOrFail($id);
         return response()->json($report);
     }
 
@@ -61,8 +63,9 @@ class ReportController extends Controller
             $validated['cover_image'] = $request->file('cover_image')->store('reports', 'public');
         }
 
+        $validated['updated_by'] = $request->user()->id;
         $report->update($validated);
-        return response()->json($report);
+        return response()->json($report->load(['creator', 'updater']));
     }
 
     public function destroy($id)

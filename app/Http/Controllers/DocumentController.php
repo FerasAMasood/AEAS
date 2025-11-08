@@ -19,6 +19,7 @@ class DocumentController extends Controller
         $doc = Document::create([
             'title'=>$request->title,
             'status'=>$request->status ?? 'draft',
+            'report_id'=>$request->report_id,
             'created_by'=>optional($request->user())->id,
             'updated_by'=>optional($request->user())->id,
         ]);
@@ -35,6 +36,11 @@ class DocumentController extends Controller
     }
 
     public function show(Document $document) {
+        return $document->load(['blocks.subsection','subsections']);
+    }
+
+    public function showByReportId($reportId) {
+        $document = Document::where('report_id', $reportId)->firstOrFail();
         return $document->load(['blocks.subsection','subsections']);
     }
 
