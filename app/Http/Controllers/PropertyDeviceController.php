@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\PropertyDevice;
+use App\Models\Property;
+use App\Services\ElectricityBalanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class PropertyDeviceController extends Controller
 {
@@ -44,6 +47,24 @@ class PropertyDeviceController extends Controller
         }
 
         PropertyDevice::insert($propertyDevices);
+
+        // Auto-trigger electricity balance analysis if this is the first time saving devices
+        try {
+            $property = Property::find($propertyId);
+            if ($property && !$property->electricity_balance) {
+                // First time saving devices - auto-generate balance
+                $balanceService = new ElectricityBalanceService();
+                $balanceData = $balanceService->calculateBalance($propertyId);
+                if ($balanceData) {
+                    $analysis = $balanceService->analyzeBalance($propertyId, $balanceData);
+                    if ($analysis) {
+                        $balanceService->storeBalance($propertyId, $balanceData, $analysis);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to auto-generate electricity balance after saving devices: ' . $e->getMessage());
+        }
 
         return response()->json(['message' => 'Property devices added successfully.']);
     }

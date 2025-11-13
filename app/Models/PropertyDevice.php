@@ -34,6 +34,8 @@ class PropertyDevice extends Model
 
     public function device()
     {
-        return $this->belongsTo(Lookup::class, 'device_key');
+        return $this->belongsTo(Lookup::class, 'device_key', 'lookup_key')
+            ->where('lookup_table', 'property_devices')
+            ->where('lookup_field', 'devices');
     }
 }

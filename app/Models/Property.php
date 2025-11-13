@@ -20,6 +20,13 @@ class Property extends Model
         'property_address',
         'property_description',
         'number_of_floors',
+        'bills_analysis',
+        'electricity_balance',
+        'electricity_balance_analysis',
+    ];
+
+    protected $casts = [
+        'electricity_balance' => 'array',
     ];
     public function propertyDevices()
     {

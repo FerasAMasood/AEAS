@@ -26,4 +26,9 @@ class Document extends Model
     {
         return $this->hasMany(DocumentSubsection::class)->orderBy('position');
     }
+
+    public function sections(): HasMany
+    {
+        return $this->hasMany(DocumentSection::class)->orderBy('position');
+    }
 }

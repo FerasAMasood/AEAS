@@ -40,4 +40,9 @@ class Report extends Model
     {
         return $this->hasOne(introduction::class);
     }
+    
+    public function tariffs()
+    {
+        return $this->hasMany(Tariff::class);
+    }
 }

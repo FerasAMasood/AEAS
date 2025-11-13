@@ -13,6 +13,7 @@ class Ebill extends Model
         'property_id',
         'date',
         'value',
+        'energy_consumption_kwh',
     ];
 
     public function property()
