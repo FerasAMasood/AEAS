@@ -12,8 +12,18 @@ class DocumentSubsection extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'document_id', 'section_id', 'title', 'slug', 'subsection_type',
-        'content_html', 'images', 'pdf_file', 'position', 'is_published'
+        'document_id',
+        'section_id',
+        'title',
+        'slug',
+        'subsection_type',
+        'content_html',
+        'analysis_intro',
+        'analysis_outro',
+        'images',
+        'pdf_file',
+        'position',
+        'is_published',
     ];
 
     protected $casts = [

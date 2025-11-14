@@ -102,6 +102,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 
+use App\Http\Controllers\DeviceCategoryAnalysisController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentSectionController;
 
@@ -125,7 +126,10 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::post('/documents/{document}/subsections',[DocumentController::class,'addSubsection']);
     Route::put('/documents/{document}/subsections/order',[DocumentController::class,'setSubsectionOrder']);
     Route::put('/documents/{document}/subsections/{subsection}',[DocumentController::class,'updateSubsection']);
+    Route::put('/documents/{document}/subsections/{subsection}/section',[DocumentController::class,'moveSubsectionSection']);
     Route::delete('/documents/{document}/subsections/{subsection}',[DocumentController::class,'deleteSubsection']);
+    Route::post('/documents/{document}/subsections/{subsection}/device-analysis/analyze',[DeviceCategoryAnalysisController::class,'analyze']);
+    Route::post('/documents/{document}/subsections/{subsection}/device-analysis/store',[DeviceCategoryAnalysisController::class,'store']);
 
     // Legacy routes (for backward compatibility)
     Route::put('/documents/{document}/order',[DocumentController::class,'setOrder']);
