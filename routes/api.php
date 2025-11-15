@@ -70,6 +70,13 @@ use App\Http\Controllers\PropertyDeviceController;
 
 Route::post('/property-devices/bulk', [PropertyDeviceController::class, 'storeBulk']);
 Route::apiResource('property-devices', PropertyDeviceController::class);
+Route::get('/properties/{property}/categories/{categoryId}/recommendations', [PropertyDeviceController::class, 'getRecommendationsData']);
+Route::post('/properties/{property}/categories/{categoryId}/recommendations/save', [PropertyDeviceController::class, 'saveRecommendations']);
+Route::get('/properties/{property}/categories/{categoryId}/recommendations/saved', [PropertyDeviceController::class, 'getSavedRecommendations']);
+Route::get('/properties/{property}/categories/{categoryId}/recommendations/summary', [PropertyDeviceController::class, 'generateSummary']);
+Route::get('/properties/{property}/categories/{categoryId}/recommendations/replacements', [PropertyDeviceController::class, 'generateReplacements']);
+Route::get('/properties/{property}/categories/{categoryId}/recommendations/delamping', [PropertyDeviceController::class, 'generateDelamping']);
+Route::get('/properties/{property}/categories/{categoryId}/recommendations/fixes', [PropertyDeviceController::class, 'generateFixes']);
 
 use App\Http\Controllers\EnergySourceController;
 
@@ -130,6 +137,11 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::delete('/documents/{document}/subsections/{subsection}',[DocumentController::class,'deleteSubsection']);
     Route::post('/documents/{document}/subsections/{subsection}/device-analysis/analyze',[DeviceCategoryAnalysisController::class,'analyze']);
     Route::post('/documents/{document}/subsections/{subsection}/device-analysis/store',[DeviceCategoryAnalysisController::class,'store']);
+    
+    // Property category analysis (for property view page)
+    Route::post('/properties/{property}/categories/{categoryId}/analyze',[DeviceCategoryAnalysisController::class,'analyzePropertyCategory']);
+    Route::get('/properties/{property}/categories/{categoryId}/analysis',[DeviceCategoryAnalysisController::class,'getPropertyCategoryAnalysis']);
+    Route::post('/properties/{property}/categories/{categoryId}/analysis',[DeviceCategoryAnalysisController::class,'storePropertyCategoryAnalysis']);
 
     // Legacy routes (for backward compatibility)
     Route::put('/documents/{document}/order',[DocumentController::class,'setOrder']);

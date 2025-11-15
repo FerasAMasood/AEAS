@@ -11,9 +11,16 @@ class TariffController extends Controller
     /**
      * Display a listing of the tariffs.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $tariffs = Tariff::with(['report', 'source'])->get();
+        $query = Tariff::with(['report', 'source']);
+        
+        // Filter by report_id if provided
+        if ($request->has('report_id')) {
+            $query->where('report_id', $request->input('report_id'));
+        }
+        
+        $tariffs = $query->get();
         return response()->json($tariffs);
     }
 
