@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Report;
+use App\Models\Tariff;
 use Illuminate\Http\Request;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -150,7 +151,8 @@ public function generatePdf($report_id)
 {
     // Find the report or fail
     $report = Report::findOrFail($report_id);
-    
+    $apiKey = "";
+    $aiModel = "gpt-4o-mini";
     // Fetch abbreviations, summary, introduction, property, and property devices
     $abbreviations = $report->abbreviations()->get();
     $summary = $report->summary;
@@ -181,11 +183,11 @@ public function generatePdf($report_id)
     
     $response = $client->post('https://api.openai.com/v1/chat/completions', [
         'headers' => [
-            'Authorization' => 'Bearer ',
+            'Authorization' => 'Bearer '. $apiKey,
             'Content-Type' => 'application/json',
         ],
         'json' => [
-            'model' => 'o1-mini',
+            'model' => $aiModel,
             "messages" => [
                 [
             'content' => "based on this data: ".json_encode($groupedDevices).", can you give specific recommendations for the electrical devices units that need improvement, plz make the recommendations as straight forward, economical and easy as possible and avoid genralatizations. Please consider any notes provided for each device when making recommendations. kindly respoend with json use description as the main key and put the recomendations as text in the value, give me a pragraph about each recomendation with energy saving calculations detailed and the total this has to be string every time, please dont use any special charachters or try to create tables just description", 
@@ -229,11 +231,11 @@ Highlight how much each system contributes as a percentage of the total power co
     $message .= implode(". Example: ", $examples). ".";
     $response2 = $client2->post('https://api.openai.com/v1/chat/completions', [
         'headers' => [
-            'Authorization' => 'Bearer  ',
+            'Authorization' => 'Bearer '. $apiKey,
             'Content-Type' => 'application/json',
         ],
         'json' => [
-            'model' => 'o1-mini',
+            'model' => $aiModel,
             "messages" => [
                 [
             'content' => $message, 
@@ -282,11 +284,11 @@ Highlight how much each system contributes as a percentage of the total power co
 
    $response3 = $client3->post('https://api.openai.com/v1/chat/completions', [
        'headers' => [
-           'Authorization' => 'Bearer  ',
+            'Authorization' => 'Bearer '. $apiKey,
            'Content-Type' => 'application/json',
        ],
        'json' => [
-           'model' => 'o1-mini',
+           'model' => $aiModel,
            "messages" => [
                [
            'content' => $message, 
@@ -316,11 +318,11 @@ Highlight how much each system contributes as a percentage of the total power co
 
    $response4 = $client4->post('https://api.openai.com/v1/chat/completions', [
        'headers' => [
-           'Authorization' => 'Bearer  ',
+            'Authorization' => 'Bearer '. $apiKey,
            'Content-Type' => 'application/json',
        ],
        'json' => [
-           'model' => 'o1-mini',
+           'model' => $aiModel,
            "messages" => [
                [
            'content' => $message, 
@@ -346,8 +348,8 @@ Highlight how much each system contributes as a percentage of the total power co
     $expectedSavingsTable = $recommendationData['expected_savings'] ?? [];
 
     // Render HTML with additional data
-
-    $keys = array_keys($tarrifValuesTable);
+    $tarrifValuesTable = Tariff::where('report_id', $report_id)->get();
+    $keys = $tarrifValuesTable->keys()->toArray();
     unset($tarrifValuesTable[$keys[$report["id"]%count($tarrifValuesTable)]]);
 
     $html = view('reports.pdf', compact(
@@ -361,7 +363,7 @@ Highlight how much each system contributes as a percentage of the total power co
         'expectedSavingsTable',
         'recommendationData',
         'tarrifValuesTable',
-        'electricityBills',
+        // 'electricityBills',
         'descriptionsnData',
         'recommendationTableDataObj',
         'recommendationTableCatDataObj'
