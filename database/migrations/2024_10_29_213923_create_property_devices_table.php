@@ -12,7 +12,7 @@ class CreatePropertyDevicesTable extends Migration
             $table->id();
             $table->foreignId('property_id')->constrained('properties')->onDelete('cascade');
             $table->foreignId('category_id')->constrained('lookups')->onDelete('cascade');
-            $table->text('device_key');
+            $table->string('device_key', 3);
             $table->text('description')->nullable();
             $table->float('factor');
             $table->float('power');
@@ -25,8 +25,6 @@ class CreatePropertyDevicesTable extends Migration
             $table->foreign('device_key')
                 ->references('lookup_key')
                 ->on('lookups')
-                ->where('lookups.lookup_field', 'devices')
-                ->where('lookups.lookup_table', 'property_devices')
                 ->onDelete('cascade');
         });
     }
