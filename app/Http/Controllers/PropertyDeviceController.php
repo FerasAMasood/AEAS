@@ -322,6 +322,8 @@ class PropertyDeviceController extends Controller
      */
     public function generateSummary(Request $request, Property $property, int $categoryId)
     {
+        // Increase execution time limit for OpenAI API calls
+        set_time_limit(120); // 2 minutes
         // Get devices and calculate basic info
         $devices = PropertyDevice::with(['device', 'category'])
             ->where('property_id', $property->id)
@@ -394,6 +396,8 @@ class PropertyDeviceController extends Controller
      */
     public function generateReplacements(Request $request, Property $property, int $categoryId)
     {
+        // Increase execution time limit for OpenAI API calls
+        set_time_limit(120); // 2 minutes
         $devices = PropertyDevice::with(['device', 'category'])
             ->where('property_id', $property->id)
             ->where('category_id', $categoryId)
@@ -456,6 +460,9 @@ class PropertyDeviceController extends Controller
      */
     public function generateDelamping(Request $request, Property $property, int $categoryId)
     {
+        // Increase execution time limit for OpenAI API calls
+        set_time_limit(120); // 2 minutes
+        
         $devices = PropertyDevice::with(['device', 'category'])
             ->where('property_id', $property->id)
             ->where('category_id', $categoryId)
@@ -498,21 +505,89 @@ class PropertyDeviceController extends Controller
             'delamping_analysis' => $delampingAnalysis,
         ]);
 
-        $delamping = $this->generateDelampingRecommendations([
-            'property_name' => $propertyName,
-            'electricity_cost_per_kwh' => $electricityCostPerKwh,
-            'delamping_analysis' => $delampingAnalysis,
-        ]);
-        Log::info('Delamping generation returned', ['delamping' => $delamping]);
+        // Trim payload sent to OpenAI to avoid very large prompts/timeouts.
+        // Sort rooms by consumption_kwh_year desc (if available) and take top 8.
+        $delampingForLLM = $delampingAnalysis;
+        if (!empty($delampingAnalysis)) {
+            usort($delampingForLLM, function ($a, $b) {
+                $aVal = $a['consumption_kwh_year'] ?? 0;
+                $bVal = $b['consumption_kwh_year'] ?? 0;
+                return $bVal <=> $aVal;
+            });
+            $originalCount = count($delampingForLLM);
+            $delampingForLLM = array_slice($delampingForLLM, 0, 8);
+            if ($originalCount > 8) {
+                Log::info('Delamping analysis truncated for LLM', [
+                    'original_count' => $originalCount,
+                    'sent_count' => count($delampingForLLM),
+                ]);
+            }
+        }
 
-        if ($delamping === null) {
-            Log::warning('Delamping generation returned null', [
+        // Check if delamping analysis is empty
+        if (empty($delampingAnalysis)) {
+            Log::warning('Delamping analysis is empty', [
                 'property_id' => $property->id,
                 'category_id' => $categoryId,
             ]);
+            $response = response()->json([
+                'error' => 'No delamping opportunities found for this category.',
+                'unnecessary_devices' => []
+            ], 200);
+            
+            $origin = $request->headers->get('Origin', '*');
+            return $response->header('Access-Control-Allow-Origin', $origin)
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->header('Access-Control-Allow-Credentials', 'true');
         }
 
-        return response()->json(['unnecessary_devices' => $delamping]);
+        try {
+            $delamping = $this->generateDelampingRecommendations([
+                'property_name' => $propertyName,
+                'electricity_cost_per_kwh' => $electricityCostPerKwh,
+                'delamping_analysis' => $delampingForLLM,
+            ]);
+            Log::info('Delamping generation returned', ['delamping' => $delamping]);
+
+            if ($delamping === null) {
+                Log::warning('Delamping generation returned null', [
+                    'property_id' => $property->id,
+                    'category_id' => $categoryId,
+                ]);
+                $response = response()->json([
+                    'error' => 'Failed to generate delamping recommendations. The OpenAI API request timed out. Please try again later.',
+                    'unnecessary_devices' => []
+                ], 200); // Return 200 with error message instead of 500
+            } else {
+                $response = response()->json(['unnecessary_devices' => $delamping]);
+            }
+            
+            // Add CORS headers
+            $origin = $request->headers->get('Origin', '*');
+            return $response->header('Access-Control-Allow-Origin', $origin)
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->header('Access-Control-Allow-Credentials', 'true');
+        } catch (\Exception $e) {
+            Log::error('Error in generateDelamping: ' . $e->getMessage(), [
+                'property_id' => $property->id,
+                'category_id' => $categoryId,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $response = response()->json([
+                'error' => 'An error occurred while generating delamping recommendations: ' . $e->getMessage(),
+                'unnecessary_devices' => []
+            ], 200); // Return 200 with error message instead of 500
+            
+            // Add CORS headers
+            $origin = $request->headers->get('Origin', '*');
+            return $response->header('Access-Control-Allow-Origin', $origin)
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                ->header('Access-Control-Allow-Credentials', 'true');
+        }
     }
 
     /**
@@ -520,6 +595,8 @@ class PropertyDeviceController extends Controller
      */
     public function generateFixes(Request $request, Property $property, int $categoryId)
     {
+        // Increase execution time limit for OpenAI API calls
+        set_time_limit(120); // 2 minutes
         $devices = PropertyDevice::with(['device', 'category'])
             ->where('property_id', $property->id)
             ->where('category_id', $categoryId)
@@ -753,7 +830,11 @@ class PropertyDeviceController extends Controller
             $prompt .= "Format: '[Category] system representing [percentage]% of the annual electricity consumption, The electricity consumption for the [category] system is [consumption] kWh per year, with a cost of [cost] NIS per year. There are [number] opportunities to save energy which is [list opportunities], it will save [total_kwh]kWh/Year and [total_nis] NIS/Year.'\n";
             $prompt .= "Return ONLY the paragraph text, no JSON, no additional formatting.";
 
-            $client = new \GuzzleHttp\Client();
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 90, // Allow more time when using higher max_tokens
+                'connect_timeout' => 10,
+            ]);
+            
             $response = $client->post('https://api.openai.com/v1/chat/completions', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiKey,
@@ -767,13 +848,13 @@ class PropertyDeviceController extends Controller
                             'content' => $prompt,
                         ],
                     ],
-                    'temperature' => 0.7,
+                    'temperature' => 0.4,
                     'max_tokens' => 500,
                 ],
-                'timeout' => 60,
             ]);
 
-            $responseData = json_decode($response->getBody()->getContents(), true);
+            $responseBody = (string) $response->getBody();
+            $responseData = json_decode($responseBody, true);
             $summary = trim($responseData['choices'][0]['message']['content'] ?? '');
 
             return $summary ?: null;
@@ -824,7 +905,11 @@ class PropertyDeviceController extends Controller
             $prompt .= "Use the replacement_analysis data provided. For each replacement opportunity, create an object with the summary paragraph and all numerical values from the replacement_analysis data.\n";
             $prompt .= "Return ONLY valid JSON, no additional text or markdown formatting.";
 
-            $client = new \GuzzleHttp\Client();
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 90, // 90 seconds for the HTTP request
+                'connect_timeout' => 10, // 10 seconds to establish connection
+            ]);
+            
             $response = $client->post('https://api.openai.com/v1/chat/completions', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiKey,
@@ -841,7 +926,6 @@ class PropertyDeviceController extends Controller
                     'temperature' => 0.7,
                     'max_tokens' => 1500,
                 ],
-                'timeout' => 60,
             ]);
 
             $responseData = json_decode($response->getBody()->getContents(), true);
@@ -934,7 +1018,11 @@ class PropertyDeviceController extends Controller
             $prompt .= "- Group delamping_data by description/room_name if needed\n";
             $prompt .= "Return ONLY valid JSON, no additional text or markdown formatting.";
 
-            $client = new \GuzzleHttp\Client();
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 90, // 90 seconds for the HTTP request
+                'connect_timeout' => 10, // 10 seconds to establish connection
+            ]);
+            
             $response = $client->post('https://api.openai.com/v1/chat/completions', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiKey,
@@ -949,9 +1037,8 @@ class PropertyDeviceController extends Controller
                         ],
                     ],
                     'temperature' => 0.7,
-                    'max_tokens' => 16384,
+                    'max_tokens' => 2000,
                 ],
-                'timeout' => 60,
             ]);
 
             $responseData = json_decode($response->getBody()->getContents(), true);
@@ -979,9 +1066,32 @@ class PropertyDeviceController extends Controller
             ]);
 
             return $decoded['unnecessary_devices'];
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            if ($e->hasResponse()) {
+                try {
+                    $statusCode = $e->getResponse()->getStatusCode();
+                    $body = $e->getResponse()->getBody()->getContents();
+                    Log::error('OpenAI API request failed', [
+                        'status' => $statusCode,
+                        'body' => $body,
+                        'message' => $e->getMessage(),
+                    ]);
+                } catch (\Exception $bodyException) {
+                    Log::error('OpenAI API request failed (could not read response)', [
+                        'message' => $e->getMessage(),
+                        'body_exception' => $bodyException->getMessage(),
+                    ]);
+                }
+            } else {
+                Log::error('OpenAI API request timeout or connection error', [
+                    'message' => $e->getMessage(),
+                    'trace' => substr($e->getTraceAsString(), 0, 500), // Limit trace length
+                ]);
+            }
+            return null;
         } catch (\Exception $e) {
             Log::error('Error generating delamping recommendations: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
+                'trace' => substr($e->getTraceAsString(), 0, 500), // Limit trace length
             ]);
             return null;
         }
@@ -1069,7 +1179,11 @@ class PropertyDeviceController extends Controller
             
             $prompt .= "Group fixes_data by description. Return ONLY valid JSON, no additional text or markdown formatting.";
 
-            $client = new \GuzzleHttp\Client();
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 90, // 90 seconds for the HTTP request
+                'connect_timeout' => 10, // 10 seconds to establish connection
+            ]);
+            
             $response = $client->post('https://api.openai.com/v1/chat/completions', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiKey,
@@ -1086,7 +1200,6 @@ class PropertyDeviceController extends Controller
                     'temperature' => 0.7,
                     'max_tokens' => 1500,
                 ],
-                'timeout' => 60,
             ]);
 
             $responseData = json_decode($response->getBody()->getContents(), true);
@@ -1223,7 +1336,11 @@ class PropertyDeviceController extends Controller
             $prompt .= "Use the grouped devices data, replacement_analysis, and delamping_analysis to identify specific opportunities. Calculate realistic savings based on the device data provided.\n";
             $prompt .= "Return ONLY valid JSON, no additional text or markdown formatting.";
 
-            $client = new \GuzzleHttp\Client();
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 90, // 90 seconds for the HTTP request
+                'connect_timeout' => 10, // 10 seconds to establish connection
+            ]);
+            
             $response = $client->post('https://api.openai.com/v1/chat/completions', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiKey,
@@ -1240,7 +1357,6 @@ class PropertyDeviceController extends Controller
                     'temperature' => 0.7,
                     'max_tokens' => 2000,
                 ],
-                'timeout' => 60,
             ]);
 
             $responseData = json_decode($response->getBody()->getContents(), true);
