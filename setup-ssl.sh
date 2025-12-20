@@ -19,10 +19,7 @@ echo -e "${GREEN}SSL Setup Script for ${DOMAIN}${NC}"
 echo "=================================="
 
 # Check if running as root
-if [ "$EUID" -eq 0 ]; then 
-   echo -e "${RED}Please do not run as root${NC}"
-   exit 1
-fi
+
 
 # Get email
 if [ -z "$EMAIL" ]; then
