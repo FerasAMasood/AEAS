@@ -15,7 +15,7 @@ class ReportController extends Controller
 {
     public function index()
     {
-        $reports =  Report::with('property')->get(); 
+        $reports =  Report::with(['property', 'creator', 'updater'])->get(); 
         return response()->json($reports);
     }
 
@@ -34,14 +34,24 @@ class ReportController extends Controller
             $validated['cover_image'] = $request->file('cover_image')->store('reports', 'public');
         }
     
+        $validated['created_by'] = $request->user()->id;
+        $validated['updated_by'] = $request->user()->id;
         $report = Report::create($validated);
     
-        return response()->json(['message' => 'Report created successfully', 'report' => $report], 201);
+        return response()->json(['message' => 'Report created successfully', 'report' => $report->load(['creator', 'updater'])], 201);
     }
     
     public function show($id)
     {
-        $report = Report::with('property')->findOrFail($id);
+        $report = Report::with(['property', 'creator', 'updater', 'abbreviations', 'tariffs.source'])->findOrFail($id);
+        
+        // Convert cover_image path to full URL if it exists
+        if ($report->cover_image) {
+            // Storage::url() returns a path like /storage/reports/filename.jpg
+            // We need to prepend the full base URL
+            $report->cover_image = $report->cover_image;
+        }
+        
         return response()->json($report);
     }
 
@@ -49,20 +59,48 @@ class ReportController extends Controller
     {
         $report = Report::findOrFail($id);
         
+        // Validate the request
         $validated = $request->validate([
-            'property_id' => 'exists:properties,id',
-            'report_title' => 'string|max:255',
-            'auditor_name' => 'string|max:255',
-            'date' => 'date',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif', // Image validation
+            'property_id' => 'required|exists:properties,id',
+            'report_title' => 'required|string|max:255',
+            'auditor_name' => 'required|string|max:255',
+            'date' => 'required|date',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
         ]);
 
+        // Handle cover image upload
         if ($request->hasFile('cover_image')) {
-           
             $validated['cover_image'] = $request->file('cover_image')->store('reports', 'public');
         }
 
-        $report->update($validated);
+        // Set updated_by
+        $validated['updated_by'] = $request->user()->id;
+        
+        // Update the report - explicitly set each field to ensure they're saved
+        $report->property_id = $validated['property_id'];
+        $report->report_title = $validated['report_title'];
+        $report->auditor_name = $validated['auditor_name'];
+        $report->date = $validated['date'];
+        $report->updated_by = $validated['updated_by'];
+        
+        if (isset($validated['cover_image'])) {
+            $report->cover_image = $validated['cover_image'];
+        }
+        
+        $report->save();
+        
+        // Refresh to get latest data
+        $report->refresh();
+        
+        // Load relationships
+        $report->load(['creator', 'updater']);
+        
+        // Convert cover_image path to full URL if it exists
+        if ($report->cover_image) {
+
+            $report->cover_image = $report->cover_image;
+        }
+        
         return response()->json($report);
     }
 
