@@ -72,7 +72,20 @@ class PropertyDeviceController extends Controller
 
     public function index(Request $request)
     {
-        $query = PropertyDevice::with(['property', 'category', 'device']);
+        $query = PropertyDevice::with([
+            'property', 
+            'category', 
+            'device' => function($q) use ($request) {
+                // Include category_id in the device lookup to prevent collisions
+                // when same device_key exists in different categories
+                // Join property_devices to access category_id for filtering
+                $q->join('property_devices', 'lookups.lookup_key', '=', 'property_devices.device_key')
+                  ->whereColumn('lookups.category', 'property_devices.category_id')
+                  ->where('lookups.lookup_table', 'property_devices')
+                  ->where('lookups.lookup_field', 'devices')
+                  ->select('lookups.*');
+            }
+        ]);
 
         // Filter by property_id if provided
         if ($request->has('property_id')) {

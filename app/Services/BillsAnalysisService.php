@@ -40,9 +40,9 @@ class BillsAnalysisService
             $propertyName = $property->property_name ?? 'the property';
 
             // Create prompt for OpenAI - concise and focused
-            $prompt = "Analyze the electricity consumption data for {$propertyName}. Currency is NIS.\n\n";
+            $prompt = "Analyze the electricity consumption data for {$propertyName}. Currency is NIS. Keep it simple and direct. Use plain text only, no special formatting characters.\n\n";
             $prompt .= "Data:\n" . json_encode($billsData, JSON_PRETTY_PRINT) . "\n\n";
-            $prompt .= "Write a short analysis paragraph (2-3 sentences) following this exact format:\n\n";
+            $prompt .= "Write a short analysis paragraph (2-3 sentences) following this format:\n\n";
             $prompt .= "The graph shows the electricity consumption of {$propertyName}, we notice fluctuations in consumption throughout the year. [Describe when increases/decreases occur, peak months, and reasons]. This pattern suggests that [conclusion about energy usage patterns].\n\n";
             $prompt .= "Be concise. Focus on: when consumption increases/decreases, peak months, reasons (air conditioning, heating, etc.), and what the pattern suggests. Use actual month names from the data.";
 
