@@ -92,6 +92,10 @@
             font-size: 0;
             overflow: hidden;
         }
+        .toc-page .content-table a {
+            color: inherit;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -157,15 +161,19 @@
         <h1>Table of Contents</h1>
         <div class="content-table">
             @foreach ($tocSections as $tocRow)
+                @php
+                    $tocHref = '#pdf-toc-'.$tocRow['key'];
+                    $tocPage = $tocPageNumbers[$tocRow['key']] ?? '';
+                @endphp
                 <div class="row">
-                    <div class="left">{{ $tocRow['label'] }}</div>
-                    <div class="right">{{ $tocPageNumbers[$tocRow['key']] ?? '' }}</div>
+                    <div class="left"><a href="{{ $tocHref }}">{{ $tocRow['label'] }}</a></div>
+                    <div class="right"><a href="{{ $tocHref }}">{{ $tocPage }}</a></div>
                 </div>
             @endforeach
         </div>
     </div>
 
-    <span id="pdf-toc-abbreviations" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-abbreviations" class="pdf-toc-anchor"></div>
     <h2>Abbreviations</h2>
     <table>
         <thead>
@@ -185,7 +193,7 @@
     </table>
     <br/>
     <br/>
-    <span id="pdf-toc-tariff_values" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-tariff_values" class="pdf-toc-anchor"></div>
     <h2>
         TARIFF VALUES
     </h2>
@@ -209,22 +217,22 @@
     </table>
 
     <div class="page-break"></div>
-    <span id="pdf-toc-executive_summary" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-executive_summary" class="pdf-toc-anchor"></div>
     <h2>Executive Summary</h2>
     <p>{!! $summary?->content !!}</p>
     <div>## todo: Add saving calc table Page 8 in Jenin's report</div>
     <div class="page-break"></div>
-    <span id="pdf-toc-general_description" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-general_description" class="pdf-toc-anchor"></div>
     <h1>GENERAL DESCRIPTION</h1>
-    <span id="pdf-toc-introduction" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-introduction" class="pdf-toc-anchor"></div>
     <h2>Introduction</h2>
     <p>{!! $introduction?->content !!}</p>
-    <span id="pdf-toc-property_site" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-property_site" class="pdf-toc-anchor"></div>
     <h2>{{ $report->property->property_name }} site</h2>
     <div>{{ $report->property->property_name }} is a {{ $report->property->property_usage }} {{$report->property->property_type}}, located in {{ $report->property->property_address }}.The {{$report->property->property_type}} was established in 2015 and consists
 of {{ $report->property->number_of_floors }} floors. with overall area of {{ $report->property->property_area }} meter square, and total of {{ $report->property-> number_of_rooms }} rooms</div>
     <div class="page-break"></div>
-    <span id="pdf-toc-property_devices" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-property_devices" class="pdf-toc-anchor"></div>
     <h2>Property Devices</h2>
     @foreach ($groupedDevices as $categoryId => $devices)
         <h3>{{ $devices->first()->category->lookup_value }}</h3>
@@ -255,7 +263,7 @@ of {{ $report->property->number_of_floors }} floors. with overall area of {{ $re
         </table>
     @endforeach
     <div class="page-break"></div>
-    <span id="pdf-toc-electricity_balance" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-electricity_balance" class="pdf-toc-anchor"></div>
     <h2>Electricity Balance</h2>
     <h6>Percentage of Energy Consumption in Different Systems Consumption</h6>
     <table>
@@ -276,10 +284,10 @@ of {{ $report->property->number_of_floors }} floors. with overall area of {{ $re
             @endforeach
         </tbody>
     </table>
-    <span id="pdf-toc-pie_chart" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-pie_chart" class="pdf-toc-anchor"></div>
     <h2>Power Consumption Pie Chart</h2>
     <div class="page-break"></div>
-    <span id="pdf-toc-recommendations_overview" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-recommendations_overview" class="pdf-toc-anchor"></div>
     <h2>Recommendations to Enhanced Power Consumption</h2>
     <div>
             @foreach ($recommendationData['recommendations'] ?? [] as $key=>$recommendation)
@@ -291,7 +299,7 @@ of {{ $report->property->number_of_floors }} floors. with overall area of {{ $re
     </div>
     
     <div class="page-break"></div>
-    <span id="pdf-toc-recommendations_by_device" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-recommendations_by_device" class="pdf-toc-anchor"></div>
     <h2>Recommendations to Enhanced Power Consumption</h2>
     <div>
     @foreach ($recommendationTableCatDataObj as $key=>$recommendation)
@@ -315,7 +323,7 @@ of {{ $report->property->number_of_floors }} floors. with overall area of {{ $re
     @endforeach
     </div>
     <div class="page-break"></div>
-    <span id="pdf-toc-recommendations_summary" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-recommendations_summary" class="pdf-toc-anchor"></div>
     <h2>Recommendations to Enhanced Power Consumption</h2>
     <table>
         <tr>
@@ -336,7 +344,7 @@ of {{ $report->property->number_of_floors }} floors. with overall area of {{ $re
 
     
     <div class="page-break"></div>
-    <span id="pdf-toc-expected_savings" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-expected_savings" class="pdf-toc-anchor"></div>
     <h2>Expected Savings</h2>
     <table>
         <thead>
@@ -359,7 +367,7 @@ of {{ $report->property->number_of_floors }} floors. with overall area of {{ $re
         </tbody>
     </table>
     <div class="page-break"></div>
-    <span id="pdf-toc-understanding_bills" class="pdf-toc-anchor"></span>
+    <div id="pdf-toc-understanding_bills" class="pdf-toc-anchor"></div>
     <h2>
         Understanding Energy Bills
     </h2>
