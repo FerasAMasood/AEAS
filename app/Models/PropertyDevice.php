@@ -37,5 +37,7 @@ class PropertyDevice extends Model
         return $this->belongsTo(Lookup::class, 'device_key', 'lookup_key')
             ->where('lookup_table', 'property_devices')
             ->where('lookup_field', 'devices');
+            // Note: category_id filtering is handled in the controller's eager loading closure
+            // to ensure both tables are available in the query
     }
 }
