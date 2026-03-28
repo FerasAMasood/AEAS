@@ -51,6 +51,20 @@ class CreatePropertyDevicesTable extends Migration
                 ");
 
                 if (!empty($columnInfo) && $columnInfo[0]->DATA_TYPE === 'text') {
+                    // Legacy rows often stored lookup_value (e.g. "Oven") instead of lookup_key ("O").
+                    DB::statement('
+                        UPDATE property_devices pd
+                        INNER JOIN lookups l ON l.category = pd.category_id
+                            AND l.lookup_value = pd.device_key
+                        SET pd.device_key = l.lookup_key
+                    ');
+                    // Any remaining free-text keys must match an existing lookup_key before VARCHAR(3).
+                    DB::statement("
+                        UPDATE property_devices pd
+                        LEFT JOIN lookups l ON l.lookup_key = pd.device_key
+                        SET pd.device_key = 'Ref'
+                        WHERE l.id IS NULL
+                    ");
                     DB::statement('ALTER TABLE `property_devices` MODIFY `device_key` VARCHAR(3) NOT NULL');
                 }
 

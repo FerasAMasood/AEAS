@@ -189,7 +189,7 @@ public function generatePdf($report_id)
 {
     // Find the report or fail
     $report = Report::findOrFail($report_id);
-    $apiKey = "";
+    $apiKey = "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";
     $aiModel = "gpt-4o-mini";
     // Fetch abbreviations, summary, introduction, property, and property devices
     $abbreviations = $report->abbreviations()->get();
@@ -386,9 +386,11 @@ Highlight how much each system contributes as a percentage of the total power co
     $expectedSavingsTable = $recommendationData['expected_savings'] ?? [];
 
     // Render HTML with additional data
-    $tarrifValuesTable = Tariff::where('report_id', $report_id)->get();
-    $keys = $tarrifValuesTable->keys()->toArray();
-    unset($tarrifValuesTable[$keys[$report["id"]%count($tarrifValuesTable)]]);
+    $tarrifValuesTable = Tariff::where('report_id', $report_id)->with('source')->get();
+    if ($tarrifValuesTable->isNotEmpty()) {
+        $keys = $tarrifValuesTable->keys()->toArray();
+        unset($tarrifValuesTable[$keys[$report['id'] % count($tarrifValuesTable)]]);
+    }
 
     $html = view('reports.pdf', compact(
         'report',
