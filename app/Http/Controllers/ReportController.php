@@ -6,6 +6,7 @@ use App\Models\Report;
 use App\Models\Tariff;
 use Illuminate\Http\Request;
 use Dompdf\Dompdf;
+use Dompdf\FrameDecorator\AbstractFrameDecorator;
 use Dompdf\Options;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Storage;
@@ -284,7 +285,7 @@ PROMPT;
         unset($tarrifValuesTable[$keys[$report->id % count($tarrifValuesTable)]]);
     }
 
-    $html = view('reports.pdf', compact(
+    $viewData = compact(
         'report',
         'abbreviations',
         'summary',
@@ -295,21 +296,82 @@ PROMPT;
         'expectedSavingsTable',
         'recommendationData',
         'tarrifValuesTable',
-        // 'electricityBills',
         'descriptionsnData',
         'recommendationTableDataObj',
         'recommendationTableCatDataObj'
-    ))->render();
+    );
 
-    // Initialize Dompdf and render PDF
+    $viewData['tocPageNumbers'] = [];
+    $htmlMeasure = view('reports.pdf', $viewData)->render();
+    $tocPageNumbers = $this->measurePdfTocPageNumbers($htmlMeasure);
+
+    $viewData['tocPageNumbers'] = $tocPageNumbers;
+    $htmlFinal = view('reports.pdf', $viewData)->render();
+
     $options = new Options();
     $options->set('defaultFont', 'Arial');
     $dompdf = new Dompdf($options);
-    $dompdf->loadHtml($html);
+    $dompdf->loadHtml($htmlFinal);
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
-    return $dompdf->stream('report_' . $report_id . '.pdf');
+
+    return $dompdf->stream('report_'.$report_id.'.pdf');
 }
+
+    /**
+     * First Dompdf pass: record which PDF page each `id="pdf-toc-*"` anchor lands on.
+     *
+     * @return array<string, int>
+     */
+    private function measurePdfTocPageNumbers(string $html): array
+    {
+        $tocAnchorPages = [];
+        $pageIndex = 0;
+
+        $options = new Options();
+        $options->set('defaultFont', 'Arial');
+        $dompdf = new Dompdf($options);
+        $dompdf->setCallbacks([
+            [
+                'event' => 'begin_page_render',
+                'f' => function ($frame, $canvas, $fontMetrics) use (&$pageIndex, &$tocAnchorPages): void {
+                    $pageIndex++;
+                    $deco = $frame instanceof AbstractFrameDecorator
+                        ? $frame
+                        : $frame->get_decorator();
+                    if ($deco instanceof AbstractFrameDecorator) {
+                        $this->collectPdfTocAnchorsRecursive($deco, $pageIndex, $tocAnchorPages);
+                    }
+                },
+            ],
+        ]);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return $tocAnchorPages;
+    }
+
+    /**
+     * @param  array<string, int>  $tocAnchorPages
+     */
+    private function collectPdfTocAnchorsRecursive(AbstractFrameDecorator $frame, int $pageNumber, array &$tocAnchorPages): void
+    {
+        $node = $frame->get_node();
+        if ($node instanceof \DOMElement && $node->hasAttribute('id')) {
+            $id = $node->getAttribute('id');
+            if (str_starts_with($id, 'pdf-toc-')) {
+                $key = substr($id, strlen('pdf-toc-'));
+                if (! isset($tocAnchorPages[$key])) {
+                    $tocAnchorPages[$key] = $pageNumber;
+                }
+            }
+        }
+
+        foreach ($frame->get_children() as $child) {
+            $this->collectPdfTocAnchorsRecursive($child, $pageNumber, $tocAnchorPages);
+        }
+    }
 
     /**
      * @param  array<string, mixed>|null  $responseData
