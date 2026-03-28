@@ -216,171 +216,63 @@ public function generatePdf($report_id)
         ];
     });
 
-    // Send grouped devices to OpenAI API for recommendations
+    $groupedDevicesJson = json_encode($groupedDevices);
+    $categoryConsumptionJson = json_encode($categoryConsumption);
+
+    $mergedPrompt = <<<PROMPT
+You are an energy-audit assistant. You will receive GROUPED_DEVICES_JSON and CATEGORY_CONSUMPTION_JSON.
+
+GROUPED_DEVICES_JSON:
+{$groupedDevicesJson}
+
+CATEGORY_CONSUMPTION_JSON:
+{$categoryConsumptionJson}
+
+Return one JSON object only (no markdown fences). Use these top-level keys:
+
+1. "recommendations" — object. Each key is a device description string from the data; each value is one plain-text paragraph with specific, economical improvement ideas and qualitative energy-saving discussion. Every value must be a string. Use device notes when present. Avoid tables and special markup.
+
+2. "category_descriptions" — object. Keys are category IDs as strings (e.g. "15"). Values are plain-text paragraphs: devices, power, operating hours, notes, and share of total consumption. Do not mention the raw category ID inside the paragraph. If many devices exist, focus on the highest consumers.
+
+3. "recommendation_summary_by_category" — object. Keys are human-readable category names (e.g. "Lighting"). Values are objects with numeric fields: current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh. Base numbers on the data and on the same improvement story you use in "recommendations".
+
+4. "recommendation_detail_by_category" — object. Keys are category names. Values are objects mapping device labels (only high consumption or high savings) to objects with current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh.
+
+5. "expected_savings" — array of objects: device_name, current_consumption, recommended_consumption, savings_percentage (numbers where applicable). Use [] if none.
+
+All sections must be internally consistent (same assumptions across tables and text).
+PROMPT;
+
     $client = new Client();
-    
     $response = $client->post('https://api.openai.com/v1/chat/completions', [
         'headers' => [
-            'Authorization' => 'Bearer '. $apiKey,
+            'Authorization' => 'Bearer '.$apiKey,
             'Content-Type' => 'application/json',
         ],
         'json' => [
             'model' => $aiModel,
-            "messages" => [
-                [
-            'content' => "based on this data: ".json_encode($groupedDevices).", can you give specific recommendations for the electrical devices units that need improvement, plz make the recommendations as straight forward, economical and easy as possible and avoid genralatizations. Please consider any notes provided for each device when making recommendations. kindly respoend with json use description as the main key and put the recomendations as text in the value, give me a pragraph about each recomendation with energy saving calculations detailed and the total this has to be string every time, please dont use any special charachters or try to create tables just description", 
-            //"Analyze the following grouped devices and recommend ways to enhance power consumption efficiency. Also, calculate the expected savings:\n" . json_encode($groupedDevices),
-            'role'=>'user'
-                ],
-                
-            ]
+            'messages' => [
+                ['role' => 'user', 'content' => $mergedPrompt],
+            ],
+            'response_format' => ['type' => 'json_object'],
+            'max_tokens' => 16384,
         ],
     ]);
-    
+
     $responseData = json_decode($response->getBody(), true);
-    
-    //$recommendations = trim(str_replace(["```json", "```"], '',));
-    $recommendations = trim(str_replace(["```json", "```"], '',$responseData['choices'][0]["message"]["content"]));
+    $merged = $this->decodeOpenAiJsonObject($responseData);
 
-
-    // Parse recommendations and expected savings
-    $recommendationData = [];
-    $recommendationData["recommendations"] = json_decode($recommendations, true) ?? [];
-
-
-
-
-    $client2 = new Client();
-    $examples = [
-        "The lighting system is one of the important systems in the building. A large number of lighting
-units are spread throughout the building, including corridors and rooms. The building mainly
-relies on 322 LED lighting units, in addition to 106 fluorescent units and some faulty units
-totaling 55. Fluorescent lighting units are less energy-efficient compared to LED units. The
-electricity consumption for the lighting system is 27,254.836 kWh per year, representing 14%
-of the annual electricity consumption, with a cost of 18,510 NIS per year.Table (5) illustrates
-the lighting consumption.",
+    $recommendationData = [
+        'recommendations' => is_array($merged['recommendations'] ?? null) ? $merged['recommendations'] : [],
+        'expected_savings' => is_array($merged['expected_savings'] ?? null) ? $merged['expected_savings'] : [],
     ];
-    $message = "based on this data: ".json_encode($groupedDevices).", and this aggrigation of the same data (".json_encode($categoryConsumption)."), return a json object, the keys are the category id, and the values and a detailed description and disccussion of energy analysis for that category, without taking about saving options the value has to be a string paragraph, don't mention category id in the text. use the follwing as expamles. Example:";
-    $message = "Based on this data: ".json_encode($groupedDevices)." and this aggregation of the same data (".json_encode($categoryConsumption)."), return a JSON object where the keys are the category IDs, and the values are detailed descriptions and discussions of energy analysis for each category. The description should:
-
-Include paragraphs above the table that describe each device and its power consumption, along with the number of hours used. If notes are provided for any device, incorporate them into the description where relevant.
-Mention only the highest-consuming device in cases where listing all devices would be unnecessary, especially if there are many devices in a category, to keep the table concise and focused on the most important information.
-Highlight how much each system contributes as a percentage of the total power consumption, which should be part of the Electricity Balance. The value for each key must be a string paragraph. Do not mention the category ID in the text. Use the following as examples. please dont use any special charachters or try to create tables just description. Exmaple:";
-    $message .= implode(". Example: ", $examples). ".";
-    $response2 = $client2->post('https://api.openai.com/v1/chat/completions', [
-        'headers' => [
-            'Authorization' => 'Bearer '. $apiKey,
-            'Content-Type' => 'application/json',
-        ],
-        'json' => [
-            'model' => $aiModel,
-            "messages" => [
-                [
-            'content' => $message, 
-            //"Analyze the following grouped devices and recommend ways to enhance power consumption efficiency. Also, calculate the expected savings:\n" . json_encode($groupedDevices),
-            'role'=>'user'
-            ]
-            ]
-        ],
-    ]);
-
-    $responseData2 = json_decode($response2->getBody(), true);
-    
-    //$recommendations = trim(str_replace(["```json", "```"], '',));
-    $descriptions = trim(str_replace(["```json", "```"], '',$responseData2['choices'][0]["message"]["content"]));
-
-
-    // Parse recommendations and expected savings
-    $descriptionsnData = [];
-    $descriptionsnData = json_decode($descriptions, true) ?? [];
-
-   // return response()->json(["res"=>$descriptionsnData]);
-   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   $client3 = new Client();
-
-   $message = "based on this data: ".json_encode($groupedDevices).", and this aggrigation of the same data (".json_encode($categoryConsumption)."), return a json object, the keys are the category id, and the values and a detailed description and disccussion of energy analysis for that category, without taking about saving options the value has to be a string paragraph, don't mention category id in the text. use the follwing as expamles. Example:";
-   $message = "Based on this data: ".json_encode($groupedDevices)." and this aggregation of the same data (".json_encode($categoryConsumption)."), return a JSON object where the keys are the category names, 
-   and the value is a json object that has the current energy use and the enery use after the recommendations and the saving, kindly use the keys: current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh. Please consider any notes provided for devices when calculating recommendations.";
-   $message .= "and based on this recomendations: ".json_encode($recommendationData["recommendations"]);
-
-   $response3 = $client3->post('https://api.openai.com/v1/chat/completions', [
-       'headers' => [
-            'Authorization' => 'Bearer '. $apiKey,
-           'Content-Type' => 'application/json',
-       ],
-       'json' => [
-           'model' => $aiModel,
-           "messages" => [
-               [
-           'content' => $message, 
-           //"Analyze the following grouped devices and recommend ways to enhance power consumption efficiency. Also, calculate the expected savings:\n" . json_encode($groupedDevices),
-           'role'=>'user'
-           ]
-           ]
-       ],
-   ]);
-
-   $responseData3 = json_decode($response3->getBody(), true);
-   
-   $recommendationTableData = trim(str_replace(["```json", "```"], '',$responseData3['choices'][0]["message"]["content"]));
-
-
-   // Parse recommendations and expected savings
-   $recommendationTableDataObj = [];
-   $recommendationTableDataObj = json_decode($recommendationTableData, true) ?? [];
-   //return response()->json(['message' => 'Report created successfully', 'report' => $recommendationTableDataObj], 201);
-
-   $client4 = new Client();
-
-   $message = "based on this data: ".json_encode($groupedDevices).", and this aggrigation of the same data (".json_encode($categoryConsumption)."), return a json object, the keys are the category id, and the values and a detailed description and disccussion of energy analysis for that category, without taking about saving options the value has to be a string paragraph, don't mention category id in the text. use the follwing as expamles. Example:";
-   $message = "Based on this data: ".json_encode($groupedDevices)." and this aggregation of the same data (".json_encode($categoryConsumption)."), return a JSON object where the keys are the category names, 
-   and the value is a json object that has the current energy use and the energy use after the recommendations per device grouped by category, use device name as key in the sub object, and the saving, dont give recommendations for all devices just the high consumption or high saving, kindly use the keys: current_energy_use_kWh, energy_use_after_recommendations_kWh, saving_kWh. Please consider any notes provided for devices when making recommendations.";
-   $message .= "and based on this recomendations: ".json_encode($recommendationData["recommendations"]);
-
-   $response4 = $client4->post('https://api.openai.com/v1/chat/completions', [
-       'headers' => [
-            'Authorization' => 'Bearer '. $apiKey,
-           'Content-Type' => 'application/json',
-       ],
-       'json' => [
-           'model' => $aiModel,
-           "messages" => [
-               [
-           'content' => $message, 
-           //"Analyze the following grouped devices and recommend ways to enhance power consumption efficiency. Also, calculate the expected savings:\n" . json_encode($groupedDevices),
-           'role'=>'user'
-           ]
-           ]
-       ],
-   ]);
-
-   $responseData4 = json_decode($response4->getBody(), true);
-   
-   $recommendationTableCatData = trim(str_replace(["```json", "```"], '',$responseData4['choices'][0]["message"]["content"]));
-
-
-   // Parse recommendations and expected savings
-   $recommendationTableCatDataObj = [];
-   $recommendationTableCatDataObj = json_decode($recommendationTableCatData, true) ?? [];
-   //return response()->json(['message' => 'Report created successfully', 'report' => $recommendationTableCatDataObj], 201);
-
+    $descriptionsnData = is_array($merged['category_descriptions'] ?? null) ? $merged['category_descriptions'] : [];
+    $recommendationTableDataObj = is_array($merged['recommendation_summary_by_category'] ?? null)
+        ? $merged['recommendation_summary_by_category']
+        : [];
+    $recommendationTableCatDataObj = is_array($merged['recommendation_detail_by_category'] ?? null)
+        ? $merged['recommendation_detail_by_category']
+        : [];
 
 
     $expectedSavingsTable = $recommendationData['expected_savings'] ?? [];
@@ -389,7 +281,7 @@ Highlight how much each system contributes as a percentage of the total power co
     $tarrifValuesTable = Tariff::where('report_id', $report_id)->with('source')->get();
     if ($tarrifValuesTable->isNotEmpty()) {
         $keys = $tarrifValuesTable->keys()->toArray();
-        unset($tarrifValuesTable[$keys[$report['id'] % count($tarrifValuesTable)]]);
+        unset($tarrifValuesTable[$keys[$report->id % count($tarrifValuesTable)]]);
     }
 
     $html = view('reports.pdf', compact(
@@ -419,4 +311,19 @@ Highlight how much each system contributes as a percentage of the total power co
     return $dompdf->stream('report_' . $report_id . '.pdf');
 }
 
+    /**
+     * @param  array<string, mixed>|null  $responseData
+     * @return array<string, mixed>
+     */
+    private function decodeOpenAiJsonObject(?array $responseData): array
+    {
+        $content = $responseData['choices'][0]['message']['content'] ?? '';
+        if (! is_string($content)) {
+            return [];
+        }
+        $content = trim(str_replace(['```json', '```'], '', $content));
+        $decoded = json_decode($content, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
 }
