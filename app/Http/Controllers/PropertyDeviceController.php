@@ -30,6 +30,14 @@ class PropertyDeviceController extends Controller
 
         foreach ($items as $categoryId => $devices) {
             foreach ($devices as $device) {
+                $voltage = isset($device['voltage']) ? (float) $device['voltage'] : null;
+                $currentAmps = isset($device['current_amps']) ? (float) $device['current_amps'] : null;
+                $powerFactor = isset($device['power_factor']) ? (float) $device['power_factor'] : null;
+                $wattage = isset($device['wattage']) ? (float) $device['wattage'] : 0;
+                if ($voltage !== null && $currentAmps !== null && $powerFactor !== null
+                    && $voltage > 0 && $currentAmps > 0 && $powerFactor > 0) {
+                    $wattage = $voltage * $currentAmps * $powerFactor;
+                }
                 $propertyDevices[] = [
                     'property_id' => $propertyId,
                     'category_id' => $categoryId,
@@ -37,7 +45,10 @@ class PropertyDeviceController extends Controller
                     'description' => $device['description'] ?? null,
                     'notes' => $device['notes'] ?? null,
                     'factor' => $device['factor'],
-                    'power' => $device['wattage'],
+                    'voltage' => $voltage,
+                    'current_amps' => $currentAmps,
+                    'power_factor' => $powerFactor,
+                    'power' => $wattage,
                     'quantity' => $device['quantity'],
                     'operation_hours' => $device['op_hours'],
                     'total_consumption' => $device['total_consumption'],
@@ -112,6 +123,9 @@ class PropertyDeviceController extends Controller
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
             'factor' => 'required|numeric',
+            'voltage' => 'nullable|numeric',
+            'current_amps' => 'nullable|numeric',
+            'power_factor' => 'nullable|numeric|min:0|max:1',
             'power' => 'required|numeric',
             'quantity' => 'required|integer',
             'operation_hours' => 'required|numeric',
@@ -138,6 +152,9 @@ class PropertyDeviceController extends Controller
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
             'factor' => 'sometimes|numeric',
+            'voltage' => 'nullable|numeric',
+            'current_amps' => 'nullable|numeric',
+            'power_factor' => 'nullable|numeric|min:0|max:1',
             'power' => 'sometimes|numeric',
             'quantity' => 'sometimes|integer',
             'operation_hours' => 'sometimes|numeric',
