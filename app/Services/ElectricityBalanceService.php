@@ -43,9 +43,13 @@ class ElectricityBalanceService
             $category = $devices->first()->category;
             $loadType = $category ? $category->lookup_value : 'Unknown';
             
-            $categoryTotal = $devices->sum('total_consumption');
+            // Sum total_consumption, treating null as 0
+            $categoryTotal = $devices->sum(function($device) {
+                return $device->total_consumption ?? 0;
+            });
             $totalConsumption += $categoryTotal;
 
+            // Include all categories, even if consumption is 0 (they'll show 0% but still appear)
             $balanceData[] = [
                 'load_type' => $loadType,
                 'total_consumption_kwh' => round($categoryTotal, 2),
@@ -89,9 +93,9 @@ class ElectricityBalanceService
         });
 
         // Create prompt for OpenAI - concise and focused
-        $prompt = "Analyze the electricity consumption breakdown by load type for {$propertyName}. Currency is NIS.\n\n";
+        $prompt = "Analyze the electricity consumption breakdown by load type for {$propertyName}. Currency is NIS. Keep it simple and direct. Use plain text only, no special formatting characters.\n\n";
         $prompt .= "Data:\n" . json_encode($dataForAnalysis, JSON_PRETTY_PRINT) . "\n\n";
-        $prompt .= "Write a short analysis paragraph (3-4 sentences) following this exact format:\n\n";
+        $prompt .= "Write a short analysis paragraph (3-4 sentences) following this format:\n\n";
         $prompt .= "The previous chart illustrates the distribution of electricity consumption across different electrical systems and the percentage consumed by each. [List the systems mentioned].\n\n";
         $prompt .= "We can observe that [system] is the largest consumer, representing [percentage] of the annual consumption, which is due to [reason]. [Other systems] are [position] consumers of electricity, with [specific details].\n\n";
         $prompt .= "[System] also constitutes a significant portion of energy consumption, with [details]. [System] represents the smallest portion of the total energy consumption.\n\n";

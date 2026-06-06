@@ -64,20 +64,11 @@ class DeviceCategoryAnalysisService
                 'device_breakdown'                 => $deviceBreakdown,
             ];
 
-            $prompt = "You are an energy efficiency specialist. "
-                . "Using the JSON dataset below, write two concise analytical paragraphs "
-                . "about the specified system inside a building. "
-                . "Paragraph 1 (intro) should describe the system scale, key device types, "
-                . "unit counts, and annual consumption with any available percentage of the total property load. "
-                . "Paragraph 2 (outro) should interpret what the numbers mean, highlighting which devices dominate "
-                . "consumption and any efficiency observations.\n\n"
+            $prompt = "Using the JSON dataset below, write two concise analytical paragraphs about the specified system inside a building. Keep it simple and direct. Paragraph 1 (intro) should describe the system scale, key device types, unit counts, and annual consumption with any available percentage of the total property load. Paragraph 2 (outro) should interpret what the numbers mean, highlighting which devices dominate consumption and any efficiency observations.\n\n"
                 . "Dataset:\n" . json_encode($dataset, JSON_PRETTY_PRINT) . "\n\n"
                 . "Return valid JSON with the following shape:\n"
                 . "{\"intro\": \"<paragraph>\", \"outro\": \"<paragraph>\"}.\n"
-                . "Rules: use plain text sentences (no bullet lists, no markdown, no special formatting). "
-                . "Mention figures in kWh and percentages when available. "
-                . "Reference the table generically as \"Table for this system\". "
-                . "Do not include any additional keys.";
+                . "Rules: Use plain text sentences only. No bullet lists, no markdown, no special formatting characters (no asterisks, underscores, hashtags, brackets). Mention figures in kWh and percentages when available. Reference the table generically as \"Table for this system\". Do not include any additional keys.";
 
             $apiKey = env('OPENAI_API_KEY');
             if (!$apiKey) {

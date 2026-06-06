@@ -54,6 +54,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/report-summaries', [ReportSummaryController::class, 'store']);  // Create new summary
     Route::get('/report-summaries/{id}', [ReportSummaryController::class, 'show']); // View a summary by ID
     Route::put('/report-summaries/{id}', [ReportSummaryController::class, 'update']); // Update a summary by ID
+    Route::post('/report-summaries/{id}/rewrite', [ReportSummaryController::class, 'rewrite']); // Rewrite summary using AI
 });
 
 // routes/api.php
@@ -64,6 +65,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/report-introductions', [IntroductionController::class, 'store']);
     Route::get('/report-introductions/{report_id}', [IntroductionController::class, 'show']);
     Route::put('/report-introductions/{id}', [IntroductionController::class, 'update']);
+    Route::post('/report-introductions/{id}/rewrite', [IntroductionController::class, 'rewrite']); // Rewrite introduction using AI
 });
 
 use App\Http\Controllers\PropertyDeviceController;
@@ -90,6 +92,7 @@ Route::post('tariffs-bulk', [TariffController::class, 'bulkStore']);
 use App\Http\Controllers\EbillController;
 use App\Http\Controllers\BillsAnalysisController;
 use App\Http\Controllers\ElectricityBalanceController;
+use App\Http\Controllers\EnergyBalanceController;
 
 Route::apiResource('ebills', EbillController::class);
 Route::post('/ebills/bulk', [EbillController::class, 'storeBulk']);
@@ -101,11 +104,44 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/bills-analysis/{propertyId}', [BillsAnalysisController::class, 'show']);
 });
 
+// HVAC analysis routes (protected)
+use App\Http\Controllers\HvacAnalysisController;
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/hvac-analysis/analyze', [HvacAnalysisController::class, 'analyze']);
+    Route::post('/hvac-analysis/store', [HvacAnalysisController::class, 'store']);
+    Route::get('/hvac-analysis/{propertyId}', [HvacAnalysisController::class, 'show']);
+});
+
 // Electricity balance routes (protected)
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/electricity-balance/analyze', [ElectricityBalanceController::class, 'analyze']);
     Route::post('/electricity-balance/store', [ElectricityBalanceController::class, 'store']);
     Route::get('/electricity-balance/{propertyId}', [ElectricityBalanceController::class, 'show']);
+});
+
+// Energy balance routes (protected)
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/energy-balance/{propertyId}/sources', [EnergyBalanceController::class, 'getEnergySources']);
+    Route::get('/energy-balance/{propertyId}', [EnergyBalanceController::class, 'getEnergyBalance']);
+    Route::post('/energy-balance/{propertyId}', [EnergyBalanceController::class, 'store']);
+    Route::get('/energy-balance/{propertyId}/analysis', [EnergyBalanceController::class, 'getAnalysis']);
+    Route::post('/energy-balance/{propertyId}/analysis', [EnergyBalanceController::class, 'saveAnalysis']);
+    Route::post('/energy-balance/{propertyId}/generate-analysis', [EnergyBalanceController::class, 'generateAnalysis']);
+});
+
+// General recommendations routes (protected)
+use App\Http\Controllers\GeneralRecommendationsController;
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/properties/{propertyId}/general-recommendations/generate', [GeneralRecommendationsController::class, 'generate']);
+    Route::post('/properties/{propertyId}/general-recommendations', [GeneralRecommendationsController::class, 'store']);
+    Route::get('/properties/{propertyId}/general-recommendations', [GeneralRecommendationsController::class, 'show']);
+});
+
+// Energy saving opportunities routes (protected)
+use App\Http\Controllers\EnergySavingOpportunitiesController;
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/properties/{propertyId}/energy-saving-opportunities', [EnergySavingOpportunitiesController::class, 'index']);
+    Route::post('/properties/{propertyId}/energy-saving-opportunities', [EnergySavingOpportunitiesController::class, 'store']);
 });
 
 
@@ -133,6 +169,7 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::post('/documents/{document}/subsections',[DocumentController::class,'addSubsection']);
     Route::put('/documents/{document}/subsections/order',[DocumentController::class,'setSubsectionOrder']);
     Route::put('/documents/{document}/subsections/{subsection}',[DocumentController::class,'updateSubsection']);
+    Route::post('/documents/{document}/subsections/{subsection}/rewrite',[DocumentController::class,'rewriteSubsectionContent']); // Rewrite subsection content using AI
     Route::put('/documents/{document}/subsections/{subsection}/section',[DocumentController::class,'moveSubsectionSection']);
     Route::delete('/documents/{document}/subsections/{subsection}',[DocumentController::class,'deleteSubsection']);
     Route::post('/documents/{document}/subsections/{subsection}/device-analysis/analyze',[DeviceCategoryAnalysisController::class,'analyze']);
@@ -146,4 +183,9 @@ Route::middleware(['auth:sanctum'])->group(function(){
     // Legacy routes (for backward compatibility)
     Route::put('/documents/{document}/order',[DocumentController::class,'setOrder']);
     Route::get('/documents/{document}/html',[DocumentController::class,'renderHtml']);
+
+    // Chat with AI
+    Route::get('/chat/conversation/{reportId}', [App\Http\Controllers\ChatController::class, 'getConversation']);
+    Route::delete('/chat/conversation/{reportId}', [App\Http\Controllers\ChatController::class, 'clearConversation']);
+    Route::post('/chat', [App\Http\Controllers\ChatController::class, 'chat']);
 });

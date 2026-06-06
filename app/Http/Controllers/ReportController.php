@@ -385,6 +385,9 @@ Highlight how much each system contributes as a percentage of the total power co
 
     $expectedSavingsTable = $recommendationData['expected_savings'] ?? [];
 
+    // Energy saving opportunities for the report's property (for summary section table)
+    $energySavingOpportunities = $property->energySavingOpportunities()->orderBy('sort_order')->get();
+
     // Render HTML with additional data
     $tarrifValuesTable = Tariff::where('report_id', $report_id)->get();
     $keys = $tarrifValuesTable->keys()->toArray();
@@ -404,7 +407,8 @@ Highlight how much each system contributes as a percentage of the total power co
         // 'electricityBills',
         'descriptionsnData',
         'recommendationTableDataObj',
-        'recommendationTableCatDataObj'
+        'recommendationTableCatDataObj',
+        'energySavingOpportunities'
     ))->render();
 
     // Initialize Dompdf and render PDF

@@ -25,9 +25,46 @@ return Application::configure(basePath: dirname(__DIR__))
         // Handle unauthenticated requests for API routes
         $exceptions->render(function (AuthenticationException $e, \Illuminate\Http\Request $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json([
+                $origin = $request->headers->get('Origin');
+                $response = response()->json([
                     'message' => 'Unauthenticated.',
                 ], 401);
+                
+                if ($origin) {
+                    $response->header('Access-Control-Allow-Origin', $origin)
+                        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                        ->header('Access-Control-Allow-Credentials', 'true');
+                }
+                
+                return $response;
+            }
+        });
+        
+        // Ensure CORS headers are added to all API error responses
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*')) {
+                $origin = $request->headers->get('Origin');
+                $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
+                $message = $e->getMessage() ?: 'Server Error';
+                
+                $response = response()->json([
+                    'message' => $message,
+                    'error' => config('app.debug') ? [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString(),
+                    ] : null,
+                ], $status);
+                
+                if ($origin) {
+                    $response->header('Access-Control-Allow-Origin', $origin)
+                        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+                        ->header('Access-Control-Allow-Credentials', 'true');
+                }
+                
+                return $response;
             }
         });
     })->create();

@@ -23,6 +23,7 @@ class Property extends Model
         'bills_analysis',
         'electricity_balance',
         'electricity_balance_analysis',
+        'hvac_analysis',
     ];
 
     protected $casts = [
@@ -40,6 +41,11 @@ class Property extends Model
     public function ebills()
     {
         return $this->hasMany(Ebill::class);
+    }
+
+    public function energySavingOpportunities()
+    {
+        return $this->hasMany(EnergySavingOpportunity::class)->orderBy('sort_order');
     }
 }
 
