@@ -6,6 +6,7 @@ use App\Models\Report;
 use App\Models\Tariff;
 use Illuminate\Http\Request;
 use Dompdf\Dompdf;
+use Dompdf\FontMetrics;
 use Dompdf\FrameDecorator\AbstractFrameDecorator;
 use Dompdf\Options;
 use GuzzleHttp\Client;
@@ -314,9 +315,28 @@ PROMPT;
     $dompdf->loadHtml($htmlFinal);
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
+    $this->addPdfPageNumberFooter($dompdf);
 
     return $dompdf->stream('report_'.$report_id.'.pdf');
 }
+
+    private function addPdfPageNumberFooter(Dompdf $dompdf): void
+    {
+        $font = $dompdf->getOptions()->getDefaultFont();
+        $canvas = $dompdf->getCanvas();
+        $footerSize = 9.0;
+        $marginBottom = 28.0;
+
+        $canvas->page_script(function (int $pageNum, int $pageCount, $cnv, FontMetrics $fm) use ($font, $footerSize, $marginBottom): void {
+            $text = "Page {$pageNum} of {$pageCount}";
+            $w = $cnv->get_width();
+            $h = $cnv->get_height();
+            $tw = $fm->getTextWidth($text, $font, $footerSize);
+            $x = max(0.0, ($w - $tw) / 2);
+            $y = $h - $marginBottom;
+            $cnv->text($x, $y, $text, $font, $footerSize, [0.25, 0.25, 0.25]);
+        });
+    }
 
     /**
      * First Dompdf pass: record which PDF page each `id="pdf-toc-*"` anchor lands on.
