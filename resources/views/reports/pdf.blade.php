@@ -220,7 +220,63 @@
     <div id="pdf-toc-executive_summary" class="pdf-toc-anchor"></div>
     <h2>Executive Summary</h2>
     <p>{!! $summary?->content !!}</p>
-    <div>## todo: Add saving calc table Page 8 in Jenin's report</div>
+
+    @if(isset($energySavingOpportunities) && $energySavingOpportunities->isNotEmpty())
+    <h3 style="margin-top: 24px; margin-bottom: 12px;">Energy saving opportunities</h3>
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-top: 12px;">
+        <thead>
+            <tr>
+                <th style="background-color: #a5d6a7; padding: 12px; border: 1px solid #000; text-align: center; width: 40px;">No.</th>
+                <th style="background-color: #a5d6a7; padding: 12px; border: 1px solid #000; text-align: left;">Energy saving opportunities</th>
+                <th style="background-color: #a5d6a7; padding: 12px; border: 1px solid #000; text-align: right;">Implementation cost(NIS)</th>
+                <th colspan="2" style="background-color: #a5d6a7; padding: 12px; border: 1px solid #000; text-align: center;">Saving</th>
+                <th style="background-color: #a5d6a7; padding: 12px; border: 1px solid #000; text-align: right;">SPBP(year)</th>
+            </tr>
+            <tr>
+                <th style="background-color: #a5d6a7; border: 1px solid #000;"></th>
+                <th style="background-color: #a5d6a7; border: 1px solid #000;"></th>
+                <th style="background-color: #a5d6a7; border: 1px solid #000;"></th>
+                <th style="background-color: #a5d6a7; padding: 8px; border: 1px solid #000; text-align: right;">kWh/Year</th>
+                <th style="background-color: #a5d6a7; padding: 8px; border: 1px solid #000; text-align: right;">NIS/Year</th>
+                <th style="background-color: #a5d6a7; border: 1px solid #000;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @php
+                $totalCost = 0;
+                $totalKwh = 0;
+                $totalNis = 0;
+            @endphp
+            @foreach($energySavingOpportunities as $index => $row)
+            @php
+                $totalCost += (float) $row->implementation_cost;
+                $totalKwh += (float) $row->saving_kwh_per_year;
+                $totalNis += (float) $row->saving_nis_per_year;
+                $spbp = $row->saving_nis_per_year > 0
+                    ? (float) $row->implementation_cost / (float) $row->saving_nis_per_year
+                    : ($row->implementation_cost == 0 ? 0 : null);
+            @endphp
+            <tr>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: center;">{{ $index + 1 }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000;">{{ $row->description }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: right;">{{ number_format($row->implementation_cost, 0) }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: right;">{{ number_format($row->saving_kwh_per_year, 0) }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: right;">{{ number_format($row->saving_nis_per_year, 2) }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: right;">{{ $spbp !== null ? number_format($spbp, 2) : '—' }}</td>
+            </tr>
+            @endforeach
+            <tr style="background-color: #c8e6c9; font-weight: bold;">
+                <td style="padding: 10px 12px; border: 1px solid #000;"></td>
+                <td style="padding: 10px 12px; border: 1px solid #000;">Total</td>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: right;">{{ number_format($totalCost, 0) }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: right;">{{ number_format($totalKwh, 0) }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000; text-align: right;">{{ number_format($totalNis, 2) }}</td>
+                <td style="padding: 10px 12px; border: 1px solid #000;"></td>
+            </tr>
+        </tbody>
+    </table>
+    @endif
+
     <div class="page-break"></div>
     <div id="pdf-toc-general_description" class="pdf-toc-anchor"></div>
     <h1>GENERAL DESCRIPTION</h1>

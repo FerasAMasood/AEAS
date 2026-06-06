@@ -279,6 +279,9 @@ PROMPT;
 
     $expectedSavingsTable = $recommendationData['expected_savings'] ?? [];
 
+    // Energy saving opportunities for the report's property (for summary section table)
+    $energySavingOpportunities = $property->energySavingOpportunities()->orderBy('sort_order')->get();
+
     // Render HTML with additional data
     $tarrifValuesTable = Tariff::where('report_id', $report_id)->with('source')->get();
     if ($tarrifValuesTable->isNotEmpty()) {
@@ -299,7 +302,8 @@ PROMPT;
         'tarrifValuesTable',
         'descriptionsnData',
         'recommendationTableDataObj',
-        'recommendationTableCatDataObj'
+        'recommendationTableCatDataObj',
+        'energySavingOpportunities',
     );
 
     $viewData['tocPageNumbers'] = [];

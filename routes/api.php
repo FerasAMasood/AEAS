@@ -104,6 +104,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/bills-analysis/{propertyId}', [BillsAnalysisController::class, 'show']);
 });
 
+// HVAC analysis routes (protected)
+use App\Http\Controllers\HvacAnalysisController;
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/hvac-analysis/analyze', [HvacAnalysisController::class, 'analyze']);
+    Route::post('/hvac-analysis/store', [HvacAnalysisController::class, 'store']);
+    Route::get('/hvac-analysis/{propertyId}', [HvacAnalysisController::class, 'show']);
+});
+
 // Electricity balance routes (protected)
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/electricity-balance/analyze', [ElectricityBalanceController::class, 'analyze']);
@@ -127,6 +135,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/properties/{propertyId}/general-recommendations/generate', [GeneralRecommendationsController::class, 'generate']);
     Route::post('/properties/{propertyId}/general-recommendations', [GeneralRecommendationsController::class, 'store']);
     Route::get('/properties/{propertyId}/general-recommendations', [GeneralRecommendationsController::class, 'show']);
+});
+
+// Energy saving opportunities routes (protected)
+use App\Http\Controllers\EnergySavingOpportunitiesController;
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/properties/{propertyId}/energy-saving-opportunities', [EnergySavingOpportunitiesController::class, 'index']);
+    Route::post('/properties/{propertyId}/energy-saving-opportunities', [EnergySavingOpportunitiesController::class, 'store']);
 });
 
 
