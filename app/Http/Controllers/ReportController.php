@@ -191,7 +191,7 @@ public function generatePdf($report_id)
 {
     // Find the report or fail
     $report = Report::findOrFail($report_id);
-    $apiKey = "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";
+    $apiKey = "";
     $aiModel = "gpt-4o-mini";
     // Fetch abbreviations, summary, introduction, property, and property devices
     $abbreviations = $report->abbreviations()->get();
