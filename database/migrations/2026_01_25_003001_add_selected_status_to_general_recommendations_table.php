@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('general_recommendations', 'selected_status')) {
+            return;
+        }
         Schema::table('general_recommendations', function (Blueprint $table) {
             $table->json('selected_status')->nullable()->after('recommendations');
         });
@@ -21,6 +24,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasColumn('general_recommendations', 'selected_status')) {
+            return;
+        }
         Schema::table('general_recommendations', function (Blueprint $table) {
             $table->dropColumn('selected_status');
         });

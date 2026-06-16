@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('energy_balance', function (Blueprint $table) {
+        Schema::table('energy_balances', function (Blueprint $table) {
             $table->decimal('power_generated', 15, 4)->nullable()->after('value');
         });
     }
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('energy_balance', function (Blueprint $table) {
+        Schema::table('energy_balances', function (Blueprint $table) {
             $table->dropColumn('power_generated');
         });
     }
