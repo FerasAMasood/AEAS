@@ -436,13 +436,13 @@ of {{ $report->property->number_of_floors }} floors. with overall area of {{ $re
             </tr>
         </thead>
         <tbody>
-            @foreach ($electricityBills as $key=>$bill)
+            {{-- @foreach ($electricityBills as $key=>$bill)
                 <tr>
                     <td>{{ $key }}</td>
                     <td>{{ $bill['kwh'] }}</td>
                     <td>{{ number_format($bill['cost'], 2) }} NIS</td>
                 </tr>
-            @endforeach
+            @endforeach --}}
         </tbody>
     </table>
     <div>
