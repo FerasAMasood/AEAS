@@ -38,7 +38,7 @@ class Report extends Model
     }
     public function introduction()
     {
-        return $this->hasOne(introduction::class);
+        return $this->hasOne(Introduction::class);
     }
     
     public function tariffs()
